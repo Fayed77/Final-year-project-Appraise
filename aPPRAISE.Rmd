@@ -1,0 +1,241 @@
+---
+title: "Appraise"
+author: "Fayed barno"
+date: "1/12/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+#Installing new packages
+#install.packages(c('flexboard', 'tidyverse', 'highcharacter', 'gt', 'htmltools', 'virdis'))
+```
+```{r}
+# Install and load the rvest package
+
+library(dplyr) # library for data manipulation
+library(tidyverse) # meta-package for data science
+library(tidyr) # library for data tidying
+library(shiny) # library for web application framework
+library(shinydashboard) # library for creating dashboards
+
+# Importing libraries for Dashboard
+
+library(tidyverse) # meta-package for data science
+
+Phone <- read_csv("iPhone.csv") # read in the data from a csv file and assign it to the variable Phone
+
+
+View(Phone) # display the data in a new window using the View function
+# Using the separate function from the tidyr package
+# to split my product column into variables. 
+
+Phone2 <- Phone %>%
+  separate(product, c("phone", "storage", "color", "carrier", "Condition"), "/") # separate the 'product' column of the Phone dataframe into individual columns using the '/' delimiter and assign the resulting dataframe to Phone2
+
+
+# Exclude the missing observations using dplyr
+
+Phone3 <-Phone2 %>%
+na.omit() # remove any rows containing missing values (NAs) from Phone2 using na.omit() and assign the resulting dataframe to Phone3
+
+# dim(Phone3)
+
+
+Phone3$Price = gsub("\\$", "", Phone3$Price) # replace the '$' symbol in the 'Price' column of Phone3 with an empty string using gsub()
+
+Phone3$storage = gsub("\\ ", "", Phone3$storage) # remove any spaces from the 'storage' column of Phone3 using gsub()
+Phone3$storage = gsub("\\gb", "GB", Phone3$storage) # replace the 'gb' string in the 'storage' column of Phone3 with 'GB' using gsub()
+Phone3$Condition = gsub("\\ ", "", Phone3$Condition) # remove any spaces from the 'Condition' column of Phone3 using gsub()
+Phone3$Condition = gsub("\\GoodCondition", "Good", Phone3$Condition) # replace the 'GoodCondition' string in the 'Condition' column of Phone3 with 'Good' using gsub()
+Phone3$carrier = gsub("\\unlocked", "Unlocked", Phone3$carrier) # replace the 'unlocked' string in the 'carrier' column of Phone3 with 'Unlocked' using gsub()
+Phone3$carrier = gsub("\\UNLOCKED", "Unlocked", Phone3$carrier) # replace the 'UNLOCKED' string in the 'carrier' column of Phone3 with 'Unlocked' using gsub()
+Phone3$carrier = gsub("\\ ", "", Phone3$carrier) # remove any spaces from the 'carrier' column of Phone3 using gsub()
+
+Phone3$Price = as.numeric(Phone3$Price) # convert the 'Price' column of Phone3 from a character vector to a numeric vector using as.numeric()
+
+Phone3$storage = as.factor(Phone3$storage) # convert the 'storage' column of Phone3 from a character vector to a factor vector using as.factor()
+Phone3$Condition = as.factor(Phone3$Condition) # convert the 'Condition' column of Phone3 from a character vector to a factor vector using as.factor()
+Phone3$carrier = as.factor(Phone3$carrier) # convert the 'carrier' column of Phone3 from a character vector to a factor vector using as.factor()
+# summary(Phone3)
+
+
+Phone3$phone = gsub("\\ ", "", Phone3$phone) # remove any spaces from the 'phone' column
+
+View(Phone3)
+```
+```{r}
+#summary(Phone3)
+levels(Phone3$phone)
+Phone4<-Phone3%>%na.omit()		
+View(Phone4)
+write.csv(Phone4, file = "PhoneTidy.csv")#Importing my  tidied dataset
+```
+```{r}
+library(gridExtra)
+```
+
+
+
+
+```{r}
+recycle <- read.csv("recy.csv")
+wasteUS<-read.csv("E-waste.csv")
+
+
+```
+
+```{r}
+recycle$Mean <- rowMeans(recycle[,2:33], na.rm=TRUE)
+```
+```{r}
+ggplot(wasteUS, aes(x=Year, y=collectionrate)) +
+  geom_line( color="#69b3a2", size=1, alpha=0.9, linetype=2) +
+  theme_ipsum() +
+  ggtitle("Recent recyling rates in the US")
+```
+```{r}
+ggplot(recycle, aes(x=period, y=Mean)) +
+  geom_line( color="#69b3a2", size=2, alpha=0.9, linetype=2) +
+  theme_ipsum() +
+  ggtitle("Worldwide recyling rate")+scale_x_continuous(breaks=seq(2008, 2018, 1))
+```
+
+```{r}
+# Load required libraries
+library(shiny)     # for building web applications
+library(ggplot2)   # for creating graphs
+library(dplyr)     # for data manipulation
+library(gridExtra) # for arranging plots
+library(shinydashboard) # library for creating dashboards
+# Load data
+Phone4 <- read.csv("PhoneTidy.csv") # reads in PhoneTidy.csv and stores it in a dataframe called Phone4
+recycle <- read.csv("recy.csv")     # reads in recy.csv and stores it in a dataframe called recycle
+wasteUS<-read.csv("E-waste.csv")    # reads in E-waste.csv and stores it in a dataframe called wasteUS
+
+# Calculate the mean of each row and store it in a new column called "Mean"
+recycle$Mean <- rowMeans(recycle[,2:33], na.rm=TRUE)
+
+# Define UI
+ui <- dashboardPage(                    # creates a Shiny dashboard web page
+  dashboardHeader(title = "Appraise"),  # adds a header to the dashboard with the title "Appraise"
+  dashboardSidebar(                    # adds a sidebar to the dashboard
+    sidebarMenu(                       # adds a menu to the sidebar
+      menuItem("Comparison by Condition", tabName = "condition", icon = icon("bar-chart")),  # adds a menu item with label "Comparison by Condition", tab name "condition", and icon "bar-chart"
+      menuItem("Price Lookup", tabName = "price_lookup", icon = icon("search")),             # adds a menu item with label "Price Lookup", tab name "price_lookup", and icon "search"
+      menuItem("Recycling Rates", tabName = "recycling_rates", icon = icon("line-chart"))    # adds a menu item with label "Recycling Rates", tab name "recycling_rates", and icon "line-chart"
+    )
+  ),
+  dashboardBody(                       # adds the main body of the dashboard
+    tabItems(                          # adds tabs to the body
+      # First tab - Comparison by Condition
+      tabItem(tabName = "condition",   # creates a tab with name "condition"
+              sidebarPanel(           # adds a sidebar panel to the tab
+                selectInput("condition", "Select Condition", choices = unique(Phone4$Condition))  # adds a dropdown menu with label "Select Condition" and options based on the unique values in the "Condition" column of the Phone4 dataframe
+              ),
+              mainPanel(              # adds a main panel to the tab
+                plotOutput("plot")    # adds a plot with id "plot"
+              )
+      ),
+      # Second tab - Price Lookup
+      tabItem(tabName = "price_lookup", # creates a tab with name "price_lookup"
+              fluidRow(              # adds a fluid row to the tab
+                column(4,            # creates a column with width 4
+                       selectInput("phone", "Select Phone", choices = unique(Phone4$phone)),    # adds a dropdown menu with label "Select Phone" and options based on the unique values in the "phone" column of the Phone4 dataframe
+                       selectInput("Condition2", "Select Condition", choices = unique(Phone4$Condition))  # adds a dropdown menu with label "Select Condition" and options based on the unique values in the "Condition" column of the Phone4 dataframe
+                ),
+                column(8,            # creates a column with width 8
+                       tableOutput("priceTable")   # adds a table with id "priceTable"
+                )
+              )
+      ),
+     
+      # Third tab - Recycling Rates
+      tabItem(tabName = "recycling_rates",
+              fluidRow(
+                column(4,
+                       selectInput("recycleData", "Choose a graph", choices = c("US Collection Rates of E-Waste", "Worldwide Recycling Rates of E-waste"))
+                ),
+                column(8,
+                       plotOutput("recyclingPlot")
+                )
+              )
+      )
+    )
+  )
+)
+
+# Define server logic
+server <- function(input, output) {
+
+  # First tab - Comparison by Condition
+  output$plot <- renderPlot({
+    # Filter the Phone4 data by the input condition and group it by phone, then calculate the mean price for each phone
+    plot_data <- Phone4 %>% filter(Condition == input$condition) %>% group_by(phone) %>% summarise(mean_price = mean(Price))
+    
+    # Plot the data using ggplot
+    ggplot(plot_data, aes(x = phone, y = mean_price, label = round(mean_price))) +
+      # Add line segments from the x-axis to the mean price for each phone
+      geom_segment(aes(x = phone, xend = phone, y = 0, yend = mean_price), color = "skyblue") +
+      # Add points for each phone
+      geom_point() +
+      # Add labels for the mean price above each point
+      geom_text(nudge_y = 70) +
+      # Use a light theme and flip the x and y axes
+      theme_light() +
+      coord_flip() +
+      # Remove y-axis gridlines, the panel border, and y-axis ticks
+      theme(
+        panel.grid.major.y = element_blank(),
+        panel.border = element_blank(),
+        axis.ticks.y = element_blank()
+      ) +
+      # Add a title to the plot based on the input condition
+      ggtitle(paste(input$condition, "Conditioned phones"))
+  })
+  
+  # Second tab - Price Lookup
+  output$priceTable <- renderTable({
+    # Filter the Phone4 data by the input condition and phone, then calculate the average price
+    data <- Phone4 %>%
+      filter(Condition == input$Condition2, phone == input$phone)
+    
+    # If data is available for the selected phone and condition, display the average price in a table
+    if (nrow(data) > 0) {
+      avg_price <- mean(data$Price)
+      data.frame(Average_Price = avg_price)
+    } 
+    # If no data is available, display a message in the table
+    else {
+      data.frame(Average_Price = "No data available for the selected phone and condition.")
+    }
+  })
+  
+  # Third tab - Recycling Rates
+  output$recyclingPlot <- renderPlot({
+    # If the "US Collection Rates of E-Waste" option is selected, plot the wasteUS data as a line chart
+    if (input$recycleData == "US Collection Rates of E-Waste") {
+      ggplot(wasteUS, aes(x = Year, y = collectionrate)) +
+        geom_line(color = "#69b3a2", size = 1, alpha = 0.9, linetype = 2) +
+        theme_ipsum() +
+        ggtitle("Recent Collection rates in the US")
+    } 
+    # If the "Worldwide Recycling Rates of E-waste" option is selected, plot the recycle data as a line chart
+    else if (input$recycleData == "Worldwide Recycling Rates of E-waste") {
+      ggplot(recycle, aes(x = period, y =Mean))+
+        geom_line(color = "#69b3a2", size = 2, alpha = 0.9, linetype = 2) +
+        theme_ipsum() +
+        ggtitle("Worldwide recycling rate") +
+        scale_x_continuous(breaks = seq(2008, 2018, 1))
+    }
+  })
+}
+
+# Run the app
+shinyApp(ui, server)
+
+```
+
+
